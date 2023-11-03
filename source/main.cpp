@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <string>
+#include <iostream>
 #include <sstream>
 #include <fstream>
 #include <math.h>
@@ -293,6 +293,38 @@ static void SetupVertexArrays()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO3);
 }
 
+string makeMeString(GLint versionRaw) {
+    stringstream ss;
+    string str = "\0";
+
+    ss << versionRaw;
+    str = ss.str();
+    return str;
+}
+
+void formatMe(string *text) {
+    string dot = ".";
+
+    text->insert(1, dot);
+    text->insert(4, dot);
+}
+
+static void PrintVersion()
+{
+    string glRender = reinterpret_cast<char const *>(glGetString(GL_RENDERER));
+	string glVersion = reinterpret_cast<char const *>(glGetString(GL_VERSION));
+	string glslVersion = reinterpret_cast<char const *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+    GLint freeGlut = (glutGet(GLUT_VERSION));
+    string versionFreeGlut = makeMeString(freeGlut); 
+    formatMe(&versionFreeGlut);
+
+	cout << "OpenGL Renderer  : " << glRender << '\n'
+			  << "OpenGL Version   : " << glVersion << '\n'
+			  << "OpenGLSL Version : " << glslVersion << '\n'
+              << "FreeGlut Version : " << versionFreeGlut << '\n'
+              << "GLEW Version     : " << glewGetString(GLEW_VERSION) << endl;
+}
+
 int main(int argc, char** argv)
 {
     srandom(3);
@@ -320,6 +352,8 @@ int main(int argc, char** argv)
     GLint vertexShaderID = LoadShader("./shaders/hello.vp", GL_VERTEX_SHADER);
     GLint fragmentsShaderID = LoadShader("./shaders/hello.fp", GL_FRAGMENT_SHADER);
     LinkShader(vertexShaderID, fragmentsShaderID);
+
+    PrintVersion();
 
     glutDisplayFunc(RenderScene);
     glutMainLoop();
