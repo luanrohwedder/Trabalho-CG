@@ -3,67 +3,121 @@
 #include <sstream>
 #include <fstream>
 #include <math.h>
+#include "basicmath.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
 using namespace std;
 
+#define WINDOW_WIDTH 1280
+#define WINDOW_HEIGHT 720
+
 GLuint VBO;
-GLint gTranslationLocation;
+GLuint IBO;
+GLuint Cube1;
+GLuint Cube2;
+GLuint Cube3;
 
-struct Vertices {
-    float x, y, z;
-};
-
-struct Matrix4f {
-    float data[4][4];
-};
-
-static Matrix4f CreateMatrix4f(float a00, float a01, float a02, float a03,
-                               float a10, float a11, float a12, float a13,
-                               float a20, float a21, float a22, float a23,
-                               float a30, float a31, float a32, float a33)
-{
-    Matrix4f m;
-
-    m.data[0][0] = a00; m.data[0][1] = a01; m.data[0][2] = a02; m.data[0][3] = a03;
-    m.data[1][0] = a10; m.data[1][1] = a11; m.data[1][2] = a12; m.data[1][3] = a13;
-    m.data[2][0] = a20; m.data[2][1] = a21; m.data[2][2] = a22; m.data[2][3] = a23;
-    m.data[3][0] = a30; m.data[3][1] = a31; m.data[3][2] = a32; m.data[3][3] = a33;
-
-    return m;
-}
+GLuint VBO2;
+GLuint VBO3;
+GLuint IBO2;
+GLuint IBO3;
+GLint gWorldLocation;
 
 static void RenderScene()
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    static float Angle = 0.0f;
-    static float Delta = 0.01f;
+    static float Scale = 0.0f;
 
-    Angle += Delta;
-    if ((Angle >= 1.5708f) || (Angle <= -1.5708f))
+#ifdef _WIN64
+    Scale += 0.001f;
+#else
+    Scale += 0.002f;
+#endif
+    float FOV = 90.0f;
+    float tanHalfFOV = tanf(ToRadian(FOV / 2.0f));
+    float d = 1 / tanHalfFOV;
+
+    float ar = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+
+    float NearZ = 0.5f;
+    float FarZ = 300.0f;
+
+    float zRange = NearZ - FarZ;
+
+    float A = (-FarZ - NearZ) / zRange;
+    float B = 2.0f * FarZ * NearZ / zRange;
+
     {
-        Delta *= -1.0f;
+        Matrix4f Rotation(cosf(Scale), 0.0f, -sinf(Scale), 0.0f,
+                          0.0f, 1.0f, 0.0f, 0.0f,
+                          sinf(Scale), 0.0f, cosf(Scale), 0.0f,
+                          0.0f, 0.0f, 0.0f, 1.0f);
+
+        Matrix4f Translation(1.0f, 0.0f, 0.0f, 0.0f,
+                             0.0f, 1.0f, 0.0f, 0.0f,
+                             0.0f, 0.0f, 1.0f, 3.5f,
+                             0.0f, 0.0f, 0.0f, 1.0f);
+
+        Matrix4f Projection(d / ar, 0.0f, 0.0f, 0.0f,
+                            0.0f, d, 0.0f, 0.0f,
+                            0.0f, 0.0f, A, B,
+                            0.0f, 0.0f, 1.0f, 0.0f);
+
+        Matrix4f FinalMatrix = Projection * Translation * Rotation;
+
+        glBindVertexArray(Cube1);
+        glUniformMatrix4fv(gWorldLocation, 1, GL_TRUE, &FinalMatrix.m[0][0]);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
 
-    Matrix4f Translation = CreateMatrix4f(cos(Angle), -sin(Angle), 0.0f, 0.0f,
-                                          sin(Angle), cos(Angle), 0.0f, 0.0f,
-                                          0.0f, 0.0f, 1.0f, 0.0,
-                                          0.0f, 0.0f, 0.0f, 1.0f);
+    {
+        Matrix4f Rotation(cosf(Scale), 0.0f, -sinf(Scale), 0.0f,
+                          0.0f, 1.0f, 0.0f, 0.0f,
+                          sinf(Scale), 0.0f, cosf(Scale), 0.0f,
+                          0.0f, 0.0f, 0.0f, 1.0f);
 
-    glUniformMatrix4fv(gTranslationLocation, 1, GL_TRUE, &Translation.data[0][0]);
+        Matrix4f Translation(1.0f, 0.0f, 0.0f, 1.0f,
+                             0.0f, 1.0f, 0.0f, 0.0f,
+                             0.0f, 0.0f, 1.0f, 1.5f,
+                             0.0f, 0.0f, 0.0f, 1.0f);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        Matrix4f Projection(d / ar, 0.0f, 0.0f, 0.0f,
+                            0.0f, d, 0.0f, 0.0f,
+                            0.0f, 0.0f, A, B,
+                            0.0f, 0.0f, 1.0f, 0.0f);
 
-    glEnableVertexAttribArray(0);
+        Matrix4f FinalMatrix = Projection * Translation * Rotation;
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindVertexArray(Cube2);
+        glUniformMatrix4fv(gWorldLocation, 1, GL_TRUE, &FinalMatrix.m[0][0]);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    }
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    {
+        Matrix4f Rotation(cosf(-Scale), 0.0f, -sinf(-Scale), 0.0f,
+                          0.0f, 1.0f, 0.0f, 0.0f,
+                          sinf(-Scale), 0.0f, cosf(-Scale), 0.0f,
+                          0.0f, 0.0f, 0.0f, 1.0f);
 
-    glDisableVertexAttribArray(0);
+        Matrix4f Translation(1.0f, 0.0f, 0.0f, -1.5f,
+                             0.0f, 1.0f, 0.0f, 0.0f,
+                             0.0f, 0.0f, 1.0f, 2.5f,
+                             0.0f, 0.0f, 0.0f, 1.0f);
+
+        Matrix4f Projection(d / ar, 0.0f, 0.0f, 0.0f,
+                            0.0f, d, 0.0f, 0.0f,
+                            0.0f, 0.0f, A, B,
+                            0.0f, 0.0f, 1.0f, 0.0f);
+
+        Matrix4f FinalMatrix = Projection * Translation * Rotation;
+
+        glBindVertexArray(Cube3);
+        glUniformMatrix4fv(gWorldLocation, 1, GL_TRUE, &FinalMatrix.m[0][0]);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    }
 
     glutPostRedisplay();
 
@@ -141,8 +195,8 @@ static void LinkShader(GLint vertexShaderID, GLint fragmentShaderID)
         exit(1);
     }
 
-    gTranslationLocation = glGetUniformLocation(shaderProgram, "gTranslation");
-    if (gTranslationLocation == -1)
+    gWorldLocation = glGetUniformLocation(shaderProgram, "gWorld");
+    if (gWorldLocation == -1)
     {
         printf("Error getting uniform location of 'gScale'\n");
         exit(1);
@@ -161,32 +215,91 @@ static void LinkShader(GLint vertexShaderID, GLint fragmentShaderID)
 
 static void CreateVertexBuffers()
 {
-    
-
-    Vertices vertices[3];
-
-    vertices[0].x = -1.0f;
-    vertices[0].y = -1.0f;
-    vertices[0].z = 0.0f;
-
-    vertices[1].x = 1.0f;
-    vertices[1].y = -1.0f;
-    vertices[1].z = 0.0f;
-
-    vertices[2].x = 0.0f;
-    vertices[2].y = 1.0f;
-    vertices[2].z = 0.0f;
+    Cube cube_red = Cube(1, 0, 0);
+    Cube cube_blue = Cube(0, 1, 0);
+    Cube cube_color = Cube();
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_red.Vertices), cube_red.Vertices, GL_STATIC_DRAW);
+    
+    glGenBuffers(1, &VBO2);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_blue.Vertices), cube_blue.Vertices, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &VBO3);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO3);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_color.Vertices), cube_color.Vertices, GL_STATIC_DRAW);
+}
+
+static void CreateIndexBuffers()
+{
+    unsigned int Indices[] = {
+                              0, 1, 2,
+                              1, 3, 4,
+                              5, 6, 3,
+                              7, 3, 6,
+                              2, 4, 7,
+                              0, 7, 6,
+                              0, 5, 1,
+                              1, 5, 3,
+                              5, 0, 6,
+                              7, 4, 3,
+                              2, 1, 4,
+                              0, 2, 7
+    };
+
+    glGenBuffers(1, &IBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices), Indices, GL_STATIC_DRAW);
+    
+    glGenBuffers(1, &IBO2);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO2);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices), Indices, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &IBO3);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO3);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices), Indices, GL_STATIC_DRAW);
+}
+
+static void SetupVertexArrays()
+{
+    glGenVertexArrays(1, &Cube1);
+    glGenVertexArrays(1, &Cube2);
+    glGenVertexArrays(1, &Cube3);
+
+    glBindVertexArray(Cube1);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+
+    glBindVertexArray(Cube2);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO3);
+
+    glBindVertexArray(Cube3);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO3);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO3);
 }
 
 int main(int argc, char** argv)
 {
+    srandom(3);
+
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-    glutInitWindowSize(640, 480);
+    glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutCreateWindow("Hello World!");
 
     GLenum res = glewInit();
@@ -196,7 +309,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CCW);
+    glCullFace(GL_FRONT);
+
     CreateVertexBuffers();
+    CreateIndexBuffers();
+    SetupVertexArrays();
     
     GLint vertexShaderID = LoadShader("./shaders/hello.vp", GL_VERTEX_SHADER);
     GLint fragmentsShaderID = LoadShader("./shaders/hello.fp", GL_FRAGMENT_SHADER);

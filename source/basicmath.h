@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <math.h>
 
+#define ToRadian(x) (float)(((x) * M_PI / 180.0f))
+
 struct Vector3f
 {
     union {
@@ -125,6 +127,66 @@ struct Vector3f
         if (endl) {
             printf("\n");
         }
+    }
+};
+
+struct Vertex {
+    Vector3f pos;
+    Vector3f color;
+
+    Vertex() {}
+
+    Vertex(float x, float y, float z)
+    {
+        pos = Vector3f(x, y, z);
+
+        float red = (float)rand() / (float)RAND_MAX;
+        float green = (float)rand() / (float)RAND_MAX;
+        float blue = (float)rand() / (float)RAND_MAX;
+        color = Vector3f(red, green, blue);
+    }
+
+    Vertex(float x, float y, float z, float _red, float _green, float _blue)
+    {
+        pos = Vector3f(x, y, z);
+
+        float red = _red;
+        float green = _green;
+        float blue = _blue;
+        color = Vector3f(red, green, blue);
+    }
+};
+
+struct Cube {
+    Vertex Vertices[8];
+
+    Cube()
+    {
+        Vertices[0] = Vertex(0.5f, 0.5f, 0.5f);
+        Vertices[1] = Vertex(-0.5f, 0.5f, -0.5f);
+        Vertices[2] = Vertex(-0.5f, 0.5f, 0.5f);
+        Vertices[3] = Vertex(0.5f, -0.5f, -0.5f);
+        Vertices[4] = Vertex(-0.5f, -0.5f, -0.5f);
+        Vertices[5] = Vertex(0.5f, 0.5f, -0.5f);
+        Vertices[6] = Vertex(0.5f, -0.5f, 0.5f);
+        Vertices[7] = Vertex(-0.5f, -0.5f, 0.5f);
+    }
+
+    Cube(float _red, float _green, float _blue)
+    {
+        Vertices[0] = Vertex(0.5f, 0.5f, 0.5f, _red, _green, _blue);
+        Vertices[1] = Vertex(-0.5f, 0.5f, -0.5f, _red, _green, _blue);
+        Vertices[2] = Vertex(-0.5f, 0.5f, 0.5f, _red, _green, _blue);
+        Vertices[3] = Vertex(0.5f, -0.5f, -0.5f, _red, _green, _blue);
+        Vertices[4] = Vertex(-0.5f, -0.5f, -0.5f, _red, _green, _blue);
+        Vertices[5] = Vertex(0.5f, 0.5f, -0.5f, _red, _green, _blue);
+        Vertices[6] = Vertex(0.5f, -0.5f, 0.5f, _red, _green, _blue);
+        Vertices[7] = Vertex(-0.5f, -0.5f, 0.5f, _red, _green, _blue);
+    }
+
+    Vertex* vertexBuffer()
+    {
+        return Vertices;
     }
 };
 
