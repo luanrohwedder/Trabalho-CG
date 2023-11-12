@@ -2,6 +2,8 @@
 
 Código fonte referente ao trabalho da disciplina de computação gráfica T01-2023-2
 
+![Demo of the app](./demo.gif)
+
 ### Ambiente 
 
 O projeto foi desenvolvido em um ambiente `Linux`, mais especificamente o `Ubuntu 22.04` rodando no `WSL2`
