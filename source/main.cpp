@@ -4,6 +4,7 @@
 #include <fstream>
 #include <math.h>
 #include "basicmath.h"
+#include "shader.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -122,95 +123,6 @@ static void RenderScene()
     glutPostRedisplay();
 
     glutSwapBuffers();
-}
-
-GLint LoadShader(const string &filename, GLenum shaderType)
-{
-    char const *p;
-    GLint res;
-    string shaderCode;
-    ifstream shaderStream(filename, std::ios::in);
-
-    if (shaderStream.good() == false)
-    {
-        fprintf(stderr, "Error Opening!\n");
-        exit(0);
-        
-    }
-    else 
-    {
-        shaderCode.assign((std::istreambuf_iterator<char>(shaderStream)),
-						  (std::istreambuf_iterator<char>()));
-    }
-
-    GLuint shaderID = glCreateShader(shaderType);
-
-    if (shaderID == 0)
-    {
-        fprintf(stderr, "Error creating shader type %d\n", shaderType);
-        exit(0);
-    }
-
-    p = shaderCode.c_str();
-
-    glShaderSource(shaderID, 1, &p, nullptr);
-    glCompileShader(shaderID);
-
-    glGetShaderiv(shaderID, GL_COMPILE_STATUS, &res);
-
-    if(!res)
-    {
-        GLchar InfoLog[1024];
-        glGetShaderInfoLog(shaderID, 1024, NULL, InfoLog);
-        fprintf(stderr, "Error compiling shader type %d: '%s'\n", shaderType, InfoLog);
-        exit(1);
-    }
-
-    return shaderID;
-}
-
-static void LinkShader(GLint vertexShaderID, GLint fragmentShaderID)
-{
-    GLint shaderProgram = glCreateProgram();
-
-    if (shaderProgram == 0)
-    {
-        fprintf(stderr, "Error creating shader program\n");
-        exit(1);
-    }
-
-    glAttachShader(shaderProgram, vertexShaderID);
-    glAttachShader(shaderProgram, fragmentShaderID);
-
-    glLinkProgram(shaderProgram);
-
-    GLint res = 0;
-    GLchar errorLog[1024] = { 0 };
-
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &res);
-    if (res == 0)
-    {
-        glGetProgramInfoLog(shaderProgram, sizeof(errorLog), NULL, errorLog);
-        fprintf(stderr, "Error linking shader program: '%s'\n", errorLog);
-        exit(1);
-    }
-
-    gWorldLocation = glGetUniformLocation(shaderProgram, "gWorld");
-    if (gWorldLocation == -1)
-    {
-        printf("Error getting uniform location of 'gScale'\n");
-        exit(1);
-    }
-
-    glValidateProgram(shaderProgram);
-    glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &res);
-    if (!res) {
-        glGetProgramInfoLog(shaderProgram, sizeof(errorLog), NULL, errorLog);
-        fprintf(stderr, "Invalid shader program: '%s'\n", errorLog);
-        exit(1);
-    }
-
-    glUseProgram(shaderProgram);
 }
 
 static void CreateVertexBuffers()
@@ -349,9 +261,9 @@ int main(int argc, char** argv)
     CreateIndexBuffers();
     SetupVertexArrays();
     
-    GLint vertexShaderID = LoadShader("./shaders/hello.vp", GL_VERTEX_SHADER);
-    GLint fragmentsShaderID = LoadShader("./shaders/hello.fp", GL_FRAGMENT_SHADER);
-    LinkShader(vertexShaderID, fragmentsShaderID);
+    Shader shader = Shader("./shaders/hello.vp", "./shaders/hello.fp");
+    shader.use();
+    gWorldLocation = shader.getWorldPos();
 
     PrintVersion();
 
